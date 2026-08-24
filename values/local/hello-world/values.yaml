@@ -1,2 +1,0 @@
-replicaCount: 2
-message: "hello from the local env override — values layering works!"
