@@ -11,6 +11,8 @@ spec:
         elements:
           - chartName: hello-world
             path: charts/hello-world
+          - chartName: podinfo
+            path: charts/podinfo
   template:
     metadata:
       name: 'labs-{{chartName}}'

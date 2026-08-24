@@ -1,0 +1,3 @@
+replicaCount: 2
+ui:
+  message: "hello from the local values override!"
