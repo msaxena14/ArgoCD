@@ -1,0 +1,40 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: lab-apps
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  generators:
+    - list:
+        elements:
+          - chartName: hello-world
+            path: charts/hello-world
+  template:
+    metadata:
+      name: 'labs-{{chartName}}'
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: lab
+      destination:
+        namespace: app
+        server: https://kubernetes.default.svc
+      sources:
+        - repoURL: https://github.com/msaxena14/ArgoCD.git
+          targetRevision: main
+          path: '{{path}}'
+          helm:
+            releaseName: '{{chartName}}'
+            valueFiles:
+              - $values/values/local/{{chartName}}/values.yaml
+        - repoURL: https://github.com/msaxena14/ArgoCD.git
+          targetRevision: main
+          ref: values
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

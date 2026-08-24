@@ -1,0 +1,15 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: lab
+  namespace: argocd
+spec:
+  description: A sandbox lab project for testing ArgoCD configurations and applications.
+  sourceRepos:
+    - https://github.com/msaxena14/ArgoCD.git
+  destinations:
+    - namespace: 'app'
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
