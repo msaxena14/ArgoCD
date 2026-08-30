@@ -60,3 +60,41 @@ argocd/               AppProject + ApplicationSet definitions
 charts/                Helm charts (hello-world, podinfo)
 values/local/          Per-environment Helm value overrides
 ```
+
+##### UNDERSTANDING THE COMPONENTS AND FLOW
+
+Big picture: this is a GitOps repo (app-of-apps pattern)
+Nothing runs from your laptop — Argo CD polls this repo and makes the cluster match whatever is committed here. There's one bootstrap object and everything else cascades from it.
+
+1. The seed: bootstrap-app.yaml
+This is the one thing a human applies manually (kubectl apply -f bootstrap/bootstrap-app.yaml). It's an Argo CD Application that just watches the argocd/ folder in this same repo. Because its syncPolicy.automated has prune: true and selfHeal: true, once it exists Argo CD keeps that folder's contents applied forever — this is the classic "app-of-apps" bootstrap: one Application whose only job is to manage the manifests that define everything else.
+
+2. What lives in argocd/: the guardrails + the generator
+project.yaml defines an AppProject called lab — think of it as an RBAC/scope boundary. It says: anything under this project can only pull from this one repo, and can only deploy into the app namespace on the local cluster. It's a sandbox fence, not app logic.
+applicationset.yaml is the interesting part. An ApplicationSet is a template that stamps out multiple Argo CD Application objects from a list. Here the generator is a hardcoded list with two entries:
+
+## hello-world -> charts/hello-world
+## podinfo     -> charts/podinfo
+For each entry, it generates an Application named labs-<chartName>, belonging to the lab project, deployed into the app namespace.
+
+3. The "two sources" trick for values
+Look closely at the sources: list in the ApplicationSet template — there are two entries, not one:
+
+The Helm chart itself (charts/hello-world or charts/podinfo)
+A second source with ref: values — this doesn't deploy anything, it just exposes this repo checkout under the alias $values so the first source's valueFiles: can reach into a different path in the repo: values/local/<chartName>/values.yaml.
+This is Argo CD's "multiple sources" Helm feature — it lets you keep the chart (reusable, generic) separate from environment-specific overrides. That's why you have a parallel values/local/ directory: values/local/hello-world/values.yaml just bumps replicaCount: 2, and values/local/podinfo/values.yaml does the same plus overrides a UI message. If you wanted a prod environment later, you'd add values/prod/<chart>/values.yaml and a new generator entry (or a matrix generator) — the chart code itself wouldn't change.
+
+4. The charts themselves
+charts/hello-world/ — a minimal, presumably hand-rolled demo chart (Deployment, Service, HPA, Ingress/HTTPRoute).
+charts/podinfo/ — the well-known upstream "podinfo" demo microservice, vendored in with more features (gRPC route, cert-manager Certificate, ServiceMonitor, PDB, a Redis subchart, Helm hooks). It's commonly used in Argo CD/Flux labs specifically because it has knobs to demonstrate rollouts, canaries, etc.
+
+
+## End-to-end flow
+1. You apply bootstrap-app.yaml once.
+2. Argo CD syncs it → applies everything in argocd/ → creates the lab AppProject and the lab-apps ApplicationSet.
+3. The ApplicationSet's list generator produces two child Applications: labs-hello-world and labs-podinfo.
+4. Each child Application renders its Helm chart with the corresponding values/local/.../values.yaml overlay and syncs it into the app namespace.
+5. Every level (bootstrap-app, and the ApplicationSet template) sets automated: {prune: true, selfHeal: true} — so this is fully self-driving GitOps: manual 
+
+## NOTE :-
+kubectl edit on the cluster gets reverted, and deleting an entry from the ApplicationSet's list deletes that whole app from the cluster (resources-finalizer.argocd.argoproj.io finalizers make sure that cleanup actually happens instead of orphaning resources).
