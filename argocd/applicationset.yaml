@@ -3,8 +3,8 @@ kind: ApplicationSet
 metadata:
   name: lab-apps
   namespace: argocd
-  # finalizers:
-  #   - resources-finalizer.argocd.argoproj.io
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
   generators:
     - list:
@@ -16,8 +16,8 @@ spec:
   template:
     metadata:
       name: 'labs-{{chartName}}'
-      # finalizers:
-      #   - resources-finalizer.argocd.argoproj.io
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
     spec:
       project: lab
       destination:
