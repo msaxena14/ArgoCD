@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArgoCD Lab — App-of-Apps, Charted</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EAF0F4; --paper-deep:#DCE6EC; --ink:#14303F; --ink-soft:#4A6575;
+    --line:#8FB0C0; --argo:#E96D39; --argo-soft:#FBE4D8; --healthy:#2E8B6E;
+    --healthy-soft:#E4F2EA; --danger:#C0392B; --danger-soft:#FADBD5;
+    --card:#FFFFFF; --mono:'IBM Plex Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--paper);color:var(--ink);font-family:'IBM Plex Sans',sans-serif}
+  body{background-image:
+      repeating-linear-gradient(0deg, transparent 0 39px, rgba(20,48,63,.045) 39px 40px),
+      repeating-linear-gradient(90deg, transparent 0 39px, rgba(20,48,63,.045) 39px 40px);
+    min-height:100vh}
+  .wrap{max-width:1220px;margin:0 auto;padding:40px 24px 80px}
+
+  header{border-bottom:2px solid var(--ink);padding-bottom:22px;margin-bottom:30px;
+    display:flex;flex-wrap:wrap;gap:18px;align-items:flex-end;justify-content:space-between}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--argo);font-weight:600}
+  h1{font-family:'Zilla Slab',serif;font-weight:700;font-size:clamp(30px,4.4vw,46px);line-height:1.05;margin-top:6px}
+  h1 em{font-style:normal;color:var(--argo)}
+  .sub{max-width:580px;color:var(--ink-soft);font-size:14.5px;line-height:1.55;margin-top:10px}
+  .ns-chip{font-family:var(--mono);font-size:12px;border:1px solid var(--line);background:var(--card);
+    padding:8px 12px;border-radius:4px;color:var(--ink-soft);white-space:nowrap}
+  .ns-chip b{color:var(--healthy);font-weight:600}
+
+  h2{font-family:'Zilla Slab',serif;font-size:22px;margin:38px 0 6px;display:flex;align-items:baseline;gap:10px}
+  h2 .no{font-family:var(--mono);font-size:12px;color:var(--argo);letter-spacing:.1em}
+  .lede{font-size:13.5px;color:var(--ink-soft);margin-bottom:14px;max-width:760px;line-height:1.55}
+  .lede b{color:var(--ink)}
+
+  /* ---------- section 1: repo tree ---------- */
+  .treewrap{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:20px}
+  @media(max-width:840px){.treewrap{grid-template-columns:1fr}}
+  .tree{border:2px solid var(--ink);border-radius:6px;background:var(--ink);color:#DCE9F0;
+    font-family:var(--mono);font-size:12.6px;line-height:1.95;padding:18px 20px;overflow-x:auto}
+  .tree .cm{color:#7E97A5}
+  .tree .row{white-space:pre;display:block;border-radius:3px;padding:0 6px}
+  .tree .row:hover{background:rgba(233,109,57,.14)}
+  .tag{font-size:10px;font-weight:600;letter-spacing:.06em;border-radius:3px;padding:1.5px 7px;margin-left:10px;vertical-align:1px}
+  .tag.manual{background:#C9A227;color:#2E2500}
+  .tag.self{background:var(--healthy);color:#fff}
+  .tag.crd{background:var(--argo);color:#fff}
+  .tag.env{background:#33556A;color:#B9D2DF}
+  .sidecard{border:2px solid var(--ink);border-radius:6px;background:var(--card);padding:16px 18px;align-self:start}
+  .sidecard h3{font-family:'Zilla Slab',serif;font-size:16px;margin-bottom:8px}
+  .sidecard p{font-size:13px;color:var(--ink-soft);line-height:1.6}
+  .sidecard .diff{font-family:var(--mono);font-size:11.6px;background:var(--paper-deep);
+    border:1px solid var(--line);border-radius:4px;padding:10px 12px;margin:10px 0;line-height:1.75;overflow-x:auto;white-space:pre}
+  .diff .add{color:var(--healthy);font-weight:600}
+  .diff .ctx{color:var(--ink-soft)}
+
+  /* ---------- controls / legend ---------- */
+  .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
+  .btn{font-family:var(--mono);font-size:12.5px;font-weight:600;border:2px solid var(--ink);
+    background:var(--argo);color:#fff;padding:9px 14px;border-radius:4px;cursor:pointer;
+    box-shadow:3px 3px 0 var(--ink);transition:transform .1s, box-shadow .1s}
+  .btn.ok{background:var(--healthy)} .btn.bad{background:var(--danger)} .btn.alt{background:#33556A}
+  .btn:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
+  .btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+  .btn:focus-visible{outline:3px solid var(--argo);outline-offset:2px}
+  .btn[disabled]{opacity:.5;cursor:default;transform:none;box-shadow:3px 3px 0 var(--ink)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--ink-soft)}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .sw{width:18px;height:12px;border-radius:2px;display:inline-block;border:1.5px solid var(--ink-soft)}
+  .sw.cfg{border-style:dashed;background:var(--paper)}
+  .sw.genr{border-color:var(--argo);background:var(--argo-soft)}
+  .sw.bound{border-color:var(--healthy);background:transparent}
+
+  /* ---------- section 2: chart ---------- */
+  .chart{position:relative;border:2px solid var(--ink);border-radius:6px;background:var(--paper-deep);
+    padding:24px;overflow:hidden}
+  .chart::after{content:"CHART Nº 9 · APP-OF-APPS PASSAGE · LOCAL CLUSTER";position:absolute;right:14px;bottom:9px;
+    font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--ink-soft);opacity:.7;pointer-events:none}
+  svg.wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+
+  .grid2{position:relative;z-index:2;display:grid;gap:24px;grid-template-columns:185px 1fr 185px}
+  @media(max-width:980px){.grid2{grid-template-columns:1fr}}
+  .sidecol{display:flex;flex-direction:column;gap:22px;justify-content:center}
+
+  .boundary{border:2.5px solid var(--healthy);border-radius:8px;background:rgba(46,139,110,.05);
+    padding:38px 16px 16px;position:relative;transition:opacity .5s}
+  .boundary .btitle{position:absolute;top:-1px;left:-1px;background:var(--healthy);color:#fff;
+    font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.06em;
+    padding:5px 12px;border-radius:6px 0 6px 0;cursor:pointer;max-width:100%}
+  .boundary.ghosted{opacity:.15;filter:grayscale(1)}
+  .bgrid{display:grid;gap:18px 28px;grid-template-columns:repeat(3,1fr);
+    grid-template-areas:"gen app1 srcs1" "tpl app2 srcs2"}
+  @media(max-width:900px){.bgrid{grid-template-columns:1fr 1fr;grid-template-areas:
+    "gen tpl" "app1 srcs1" "app2 srcs2"}}
+  @media(max-width:560px){.bgrid{grid-template-columns:1fr;grid-template-areas:
+    "gen" "tpl" "app1" "srcs1" "app2" "srcs2"}}
+  .srcstack{display:flex;flex-direction:column;gap:12px}
+  #n-gen{grid-area:gen} #n-tpl{grid-area:tpl} #n-app1{grid-area:app1} #n-app2{grid-area:app2}
+  #srcs1{grid-area:srcs1} #srcs2{grid-area:srcs2}
+
+  .node{background:var(--card);border:2px solid var(--ink);border-radius:6px;padding:12px 13px;
+    cursor:pointer;position:relative;transition:opacity .45s, transform .12s, box-shadow .12s, background .3s, border-color .3s;
+    box-shadow:3px 3px 0 rgba(20,48,63,.18)}
+  .node:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 rgba(20,48,63,.25)}
+  .node:focus-visible{outline:3px solid var(--argo);outline-offset:2px}
+  .node .role{font-family:var(--mono);font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--argo);font-weight:600;margin-bottom:4px}
+  .node h3{font-family:var(--mono);font-size:12.5px;font-weight:600;line-height:1.35;word-break:break-word}
+  .node p{font-size:11.5px;color:var(--ink-soft);line-height:1.45;margin-top:5px}
+  .node.cfg{border-style:dashed;background:var(--paper)}
+  .node.cfg .role{color:var(--ink-soft)}
+  .node.genr{border-color:var(--argo);background:var(--argo-soft)}
+  .node.genr .role{color:#B04A1C}
+  .node.dark{background:var(--ink);color:#DCE9F0;border-color:var(--ink)}
+  .node.dark h3{color:#fff}.node.dark p{color:#9FB8C6}.node.dark .role{color:#F0A57F}
+  .node.dest{border-color:var(--healthy);background:var(--healthy-soft)}
+  .node.dest .role{color:#1C6B50}
+  .node.dim{opacity:.25}
+  .node.active{border-color:var(--argo);box-shadow:4px 4px 0 rgba(233,109,57,.4)}
+  .node.pulse{border-color:var(--argo);background:var(--argo-soft)}
+  .node.dark.pulse{background:#24485C}
+  .node.dest.pulse{background:#CDEBDD}
+  .node.ghost{opacity:.12;filter:grayscale(1)}
+  .node.stuck{border-color:var(--danger);background:var(--danger-soft);animation:shake .5s}
+  .node .flag{display:none;font-family:var(--mono);font-size:9.5px;font-weight:600;color:#fff;
+    background:var(--danger);border-radius:3px;padding:2px 7px;margin-top:7px;letter-spacing:.04em}
+  .node.stuck .flag{display:inline-block}
+  .node .okflag{display:none;font-family:var(--mono);font-size:9.5px;font-weight:600;color:#fff;
+    background:var(--healthy);border-radius:3px;padding:2px 7px;margin-top:7px;letter-spacing:.04em}
+  .node.synced .okflag{display:inline-block}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+
+  .panel{margin-top:20px;border:2px solid var(--ink);border-radius:6px;background:var(--ink);color:#DCE9F0;
+    font-family:var(--mono);font-size:13px;line-height:1.65;padding:16px 20px;min-height:104px}
+  .panel .ptitle{color:var(--argo);font-weight:600;letter-spacing:.06em}
+  .panel .pk{color:#8FC7B4}.panel .muted{color:#7E97A5}.panel .bad{color:#F2A08F}.panel .good{color:#8FC7B4}
+
+  .footnote{margin-top:16px;font-size:12.5px;color:var(--ink-soft);line-height:1.6;max-width:800px}
+  .footnote b{color:var(--ink)}
+  @media (prefers-reduced-motion: reduce){.node,.btn{transition:none}.node.stuck{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="eyebrow">argocd-lab · app-of-apps pattern</div>
+      <h1>One Seed, <em>a Whole Fleet</em></h1>
+      <p class="sub">A single bootstrap Application is applied by hand — once. Everything downstream cascades from
+        git: an AppProject as the fence, an ApplicationSet stamping one Application per list entry, and multi-source
+        Helm keeping charts generic while <code>values/local/</code> carries the environment.</p>
+    </div>
+    <div class="ns-chip">1 manual apply · <b>everything else self-driving</b> · prune + selfHeal at every level</div>
+  </header>
+
+  <!-- ================= VIEW 01 ================= -->
+  <h2><span class="no">VIEW 01</span> Repo layout — one manual file, three self-managed layers</h2>
+  <p class="lede">Only <b>bootstrap/</b> ever meets a human's kubectl. The <b>argocd/</b> folder is self-managed the
+    moment the seed exists; charts stay generic; environment specifics live apart in <b>values/local/</b> so a future
+    <code>values/prod/</code> reuses the same charts untouched.</p>
+
+  <div class="treewrap">
+    <div class="tree" aria-label="repository file tree">
+<span class="row">📁 argocd-lab/</span>
+<span class="row">├── bootstrap/</span>
+<span class="row">│   └── bootstrap-app.yaml       <span class="cm"># kind: Application — the seed</span><span class="tag crd">CRD</span><span class="tag manual">MANUAL · ×1</span></span>
+<span class="row">├── argocd/                      <span class="cm"># watched by the seed → self-managed forever</span><span class="tag self">SELF-MANAGED</span></span>
+<span class="row">│   ├── project.yaml             <span class="cm"># kind: AppProject "lab" — the fence</span><span class="tag crd">CRD</span></span>
+<span class="row">│   └── applicationset.yaml      <span class="cm"># kind: ApplicationSet "lab-apps" — the stamp</span><span class="tag crd">CRD</span></span>
+<span class="row">├── charts/                      <span class="cm"># generic, reusable — no env knowledge</span></span>
+<span class="row">│   ├── hello-world/             <span class="cm"># minimal demo chart</span></span>
+<span class="row">│   └── podinfo/                 <span class="cm"># upstream microservice: Redis subchart, gRPC, ServiceMonitor, PDB</span></span>
+<span class="row">└── values/local/                <span class="cm"># per-environment overlays, reached via $values</span><span class="tag env">ENV: local</span></span>
+<span class="row">    ├── hello-world/values.yaml  <span class="cm"># replicaCount: 2</span></span>
+<span class="row">    └── podinfo/values.yaml      <span class="cm"># replicas + UI message override</span></span>
+    </div>
+
+    <div class="sidecard">
+      <h3>Adding a new app = 3 touches</h3>
+      <p>1. Chart under <code>charts/&lt;name&gt;/</code> · 2. Overrides under
+      <code>values/local/&lt;name&gt;/values.yaml</code> · 3. One list entry:</p>
+      <div class="diff"><span class="ctx"> - list:
+     elements:
+     - chartName: hello-world
+       path: charts/hello-world</span>
+<span class="add">+    - chartName: &lt;name&gt;
++      path: charts/&lt;name&gt;</span></div>
+      <p>Argo CD picks up the entry and creates <code>labs-&lt;name&gt;</code> automatically — no kubectl beyond
+      the original bootstrap. A new environment works the same way sideways: add
+      <code>values/prod/&lt;name&gt;/values.yaml</code> and new generator entries (or a matrix generator);
+      the charts never change.</p>
+    </div>
+  </div>
+
+  <!-- ================= VIEW 02 ================= -->
+  <h2><span class="no">VIEW 02</span> The cascade — seed → fence → stamp → apps → namespace</h2>
+  <p class="lede">Click anything to inspect it, or run the traces. Dashed = <b>config</b> (generator/template),
+    solid orange = <b>generated</b> Application CRs, the green frame is the <b>AppProject "lab"</b> boundary,
+    and the green node is where workloads actually land.</p>
+
+  <div class="controls">
+    <button class="btn" id="btnBoot">▸ Bootstrap cascade</button>
+    <button class="btn ok" id="btnAdd">＋ Add an app</button>
+    <button class="btn bad" id="btnDel">✂ Remove a list entry</button>
+    <button class="btn alt" id="btnDrift">↺ Drift: kubectl edit</button>
+    <div class="legend">
+      <span><i class="sw cfg"></i> config</span>
+      <span><i class="sw genr"></i> generated</span>
+      <span><i class="sw bound"></i> AppProject fence</span>
+    </div>
+  </div>
+
+  <div class="chart" id="chart">
+    <svg class="wires" id="wires"></svg>
+    <div class="grid2">
+
+      <div class="sidecol">
+        <div class="node dark" id="n-you" tabindex="0">
+          <div class="role">Human · once</div>
+          <h3>you + kubectl</h3>
+          <p>kubectl apply -f bootstrap/bootstrap-app.yaml — the only manual command in the whole system.</p>
+        </div>
+        <div class="node dark" id="n-boot" tabindex="0">
+          <div class="role">kind: Application · the seed</div>
+          <h3>bootstrap-app</h3>
+          <p>Watches the argocd/ folder of this repo. automated: prune + selfHeal → that folder is applied forever.</p>
+        </div>
+      </div>
+
+      <div class="boundary" id="boundary">
+        <span class="btitle" id="n-proj" tabindex="0" role="button">🛡 kind: AppProject "lab" — only this repo · only namespace "app"</span>
+        <div class="bgrid">
+
+          <div class="node cfg" id="n-gen" tabindex="0">
+            <div class="role">Config · list generator</div>
+            <h3>lab-apps · elements</h3>
+            <p>— chartName: hello-world<br>&nbsp;&nbsp;&nbsp;path: charts/hello-world<br>— chartName: podinfo<br>&nbsp;&nbsp;&nbsp;path: charts/podinfo</p>
+          </div>
+
+          <div class="node cfg" id="n-tpl" tabindex="0">
+            <div class="role">Config · template</div>
+            <h3>Application template</h3>
+            <p>name: labs-{chartName} · project: lab · dest namespace: app · sources: chart + ref: values</p>
+          </div>
+
+          <div class="node genr" id="n-app1" tabindex="0">
+            <div class="role">Generated · kind: Application</div>
+            <h3>labs-hello-world</h3>
+            <p>Stamped from element 1. Carries resources-finalizer for guaranteed cleanup.</p>
+            <span class="flag">pruning · finalizer running</span>
+            <span class="okflag">Synced · Healthy</span>
+          </div>
+
+          <div class="node genr" id="n-app2" tabindex="0">
+            <div class="role">Generated · kind: Application</div>
+            <h3>labs-podinfo</h3>
+            <p>Stamped from element 2 — a real upstream chart, same template.</p>
+            <span class="flag">pruning · finalizer running</span>
+            <span class="okflag">Synced · Healthy</span>
+          </div>
+
+          <div class="srcstack" id="srcs1">
+            <div class="node" id="n-s1a" tabindex="0">
+              <div class="role">Source 1 · Helm chart</div>
+              <h3>charts/hello-world</h3>
+              <p>Generic chart — Deployment, Service, HPA, route. Contributes the resources.</p>
+            </div>
+            <div class="node" id="n-s1b" tabindex="0">
+              <div class="role">Source 2 · ref: values</div>
+              <h3>$values/values/local/hello-world/values.yaml</h3>
+              <p>Deploys nothing — just makes the repo reachable as $values. Here: replicaCount: 2.</p>
+            </div>
+          </div>
+
+          <div class="srcstack" id="srcs2">
+            <div class="node" id="n-s2a" tabindex="0">
+              <div class="role">Source 1 · Helm chart</div>
+              <h3>charts/podinfo</h3>
+              <p>Vendored upstream: Redis subchart, gRPC route, Certificate, ServiceMonitor, PDB, hooks.</p>
+            </div>
+            <div class="node" id="n-s2b" tabindex="0">
+              <div class="role">Source 2 · ref: values</div>
+              <h3>$values/values/local/podinfo/values.yaml</h3>
+              <p>Replicas + UI message override. Same alias trick, different path.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="sidecol">
+        <div class="node dest" id="n-dest" tabindex="0">
+          <div class="role">Destination</div>
+          <h3>local cluster · namespace: app</h3>
+          <p>Where both apps land. automated: prune + selfHeal — hand edits here get reverted on the next reconcile.</p>
+          <span class="flag">manual edit detected</span>
+          <span class="okflag">matches git</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="panel" id="panel">
+    <span class="ptitle">lab log —</span> <span class="muted">click a node to inspect it, or run a trace:
+    the full bootstrap cascade, the 3-touch "add an app" workflow, finalizer-backed removal, or what selfHeal does to a stray kubectl edit.</span>
+  </div>
+
+  <p class="footnote"><b>The two rules this repo encodes:</b> nothing runs from your laptop (Argo CD polls git and
+  makes the cluster match), and every level sets <code>automated: {prune: true, selfHeal: true}</code> — so a
+  <code>kubectl edit</code> on the cluster is reverted, and deleting a list entry deletes that whole app, with
+  <code>resources-finalizer.argocd.argoproj.io</code> guaranteeing the cleanup actually happens instead of orphaning resources.</p>
+
+</div>
+
+<script>
+(function(){
+  const chart=document.getElementById('chart'), svg=document.getElementById('wires'),
+        panel=document.getElementById('panel'), boundary=document.getElementById('boundary');
+  const btns={boot:document.getElementById('btnBoot'),add:document.getElementById('btnAdd'),
+              del:document.getElementById('btnDel'),drift:document.getElementById('btnDrift')};
+  const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $=id=>document.getElementById(id);
+
+  // [from, to, label]
+  const edges=[
+    ['n-you','n-boot','kubectl apply -f bootstrap/bootstrap-app.yaml — applied once, then never again'],          //0
+    ['n-boot','n-proj','watches argocd/ → keeps project.yaml applied (prune + selfHeal)'],                        //1
+    ['n-boot','n-gen','watches argocd/ → keeps applicationset.yaml applied'],                                     //2
+    ['n-gen','n-app1','element {chartName: hello-world} → labs-hello-world'],                                     //3
+    ['n-gen','n-app2','element {chartName: podinfo} → labs-podinfo'],                                             //4
+    ['n-tpl','n-app1','template stamped: name labs-{chartName}, project lab, namespace app'],                     //5
+    ['n-tpl','n-app2','same template, second stamp — consistency for free'],                                      //6
+    ['n-app1','n-s1a','source 1: the Helm chart at charts/hello-world'],                                          //7
+    ['n-app1','n-s1b','source 2: ref: values — exposes this repo as $values'],                                    //8
+    ['n-s1b','n-s1a','valueFiles: $values/values/local/hello-world/values.yaml overlays the chart'],              //9
+    ['n-app2','n-s2a','source 1: the Helm chart at charts/podinfo'],                                              //10
+    ['n-app2','n-s2b','source 2: ref: values — same alias, different path'],                                      //11
+    ['n-s2b','n-s2a','valueFiles: $values/values/local/podinfo/values.yaml overlays the chart'],                  //12
+    ['n-app1','n-dest','rendered manifests synced into namespace app (automated)'],                               //13
+    ['n-app2','n-dest','rendered manifests synced into namespace app (automated)'],                               //14
+  ];
+
+  const details={
+    'n-you':['you + kubectl','The entire human footprint of this system: one apply of the seed. From then on your interface is git commits — the cluster follows.'],
+    'n-boot':['bootstrap-app (the seed)','An ordinary kind: Application whose only job is meta: it points at the argocd/ folder of this same repo. Because it runs <span class="pk">automated: prune + selfHeal</span>, the AppProject and ApplicationSet inside that folder are continuously (re)applied — the classic app-of-apps bootstrap.'],
+    'n-proj':['kind: AppProject "lab"','The fence, not app logic: Applications in this project may only pull from <span class="pk">this one repo</span> and only deploy into <span class="pk">namespace app</span> on the local cluster. A child pointing anywhere else fails with a project-permission error — worth remembering when debugging, because it looks nothing like a values problem.'],
+    'n-gen':['list generator (config)','Hardcoded elements; each contributes <span class="pk">{chartName}</span> and <span class="pk">{path}</span> as template variables. Adding an entry is the whole "new app" request; removing one deletes that app from the cluster.'],
+    'n-tpl':['Application template (config)','One spec stamped per element: <span class="pk">labs-{chartName}</span>, pinned to project lab, destined for namespace app, with the two-source Helm pattern baked in so every child inherits it identically.'],
+    'n-app1':['labs-hello-world (generated)','A materialized CR you can kubectl get — not config. Renders the minimal demo chart with the local overlay (replicaCount: 2) and syncs it automatically.'],
+    'n-app2':['labs-podinfo (generated)','Same template, richer cargo: the upstream podinfo chart with its Redis subchart, gRPC route, ServiceMonitor and PDB — chosen for labs precisely because it has knobs for rollouts and canaries.'],
+    'n-s1a':['chart source','Generic and environment-blind. All environment knowledge stays out of charts/ by design.'],
+    'n-s1b':['ref: values source','Contributes zero resources. Its only purpose is to expose the repo checkout under the <span class="pk">$values</span> alias so the chart source\'s valueFiles can reach values/local/… — Argo CD\'s multi-source Helm feature.'],
+    'n-s2a':['chart source (upstream)','Vendored podinfo. Upgrading it later = replacing this folder; the values overlay and template don\'t change.'],
+    'n-s2b':['ref: values source','Identical mechanism to hello-world\'s. A future values/prod/podinfo/values.yaml would slot in beside it without touching the chart.'],
+    'n-dest':['destination: namespace "app"','The live state. Both children land here, continuously reconciled. <span class="pk">selfHeal</span> reverts manual edits; <span class="pk">prune</span> removes anything git no longer declares.'],
+  };
+
+  function center(el){const r=el.getBoundingClientRect(),c=chart.getBoundingClientRect();
+    return {x:r.left-c.left+r.width/2,y:r.top-c.top+r.height/2,l:r.left-c.left,rr:r.right-c.left,t:r.top-c.top,b:r.bottom-c.top};}
+  function anchor(a,b){const dx=b.x-a.x,dy=b.y-a.y;
+    if(Math.abs(dx)>Math.abs(dy))return dx>0?[{x:a.rr,y:a.y},{x:b.l,y:b.y}]:[{x:a.l,y:a.y},{x:b.rr,y:b.y}];
+    return dy>0?[{x:a.x,y:a.b},{x:b.x,y:b.t}]:[{x:a.x,y:a.t},{x:b.x,y:b.b}];}
+
+  let paths=[];
+  function draw(){
+    svg.innerHTML='';paths=[];
+    svg.setAttribute('viewBox',`0 0 ${chart.clientWidth} ${chart.clientHeight}`);
+    svg.innerHTML=`<defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#8FB0C0"/></marker>
+      <marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+        <path d="M0,0 L10,5 L0,10 z" fill="#E96D39"/></marker>
+    </defs>`;
+    edges.forEach((e,i)=>{
+      const A=center($(e[0])),B=center($(e[1]));
+      const [p1,p2]=anchor(A,B);const mx=(p1.x+p2.x)/2;
+      const d=Math.abs(p1.x-p2.x)>Math.abs(p1.y-p2.y)
+        ?`M${p1.x},${p1.y} C${mx},${p1.y} ${mx},${p2.y} ${p2.x},${p2.y}`
+        :`M${p1.x},${p1.y} C${p1.x},${(p1.y+p2.y)/2} ${p2.x},${(p1.y+p2.y)/2} ${p2.x},${p2.y}`;
+      const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+      p.setAttribute('d',d);p.setAttribute('fill','none');p.dataset.i=i;
+      styleEdge(p,'base');svg.appendChild(p);paths.push(p);
+    });
+  }
+  function styleEdge(p,mode){
+    if(mode==='base'){p.setAttribute('stroke','#8FB0C0');p.setAttribute('stroke-width','2');
+      p.setAttribute('marker-end','url(#arr)');p.removeAttribute('stroke-dasharray');
+      if(edges[p.dataset.i][2].startsWith('valueFiles'))p.setAttribute('stroke-dasharray','2 5');
+      p.style.opacity='1';}
+    if(mode==='hot'){p.setAttribute('stroke','#E96D39');p.setAttribute('stroke-width','3');
+      p.setAttribute('marker-end','url(#arrA)');p.setAttribute('stroke-dasharray','8 6');p.style.opacity='1';}
+    if(mode==='faint'){p.setAttribute('stroke','rgba(143,176,192,.25)');p.setAttribute('marker-end','url(#arr)');p.style.opacity='1';}
+    if(mode==='hidden'){p.style.opacity='0';}
+  }
+
+  function log(t,b){panel.innerHTML=`<span class="ptitle">${t}</span><br>${b}`;}
+  const allNodes=()=>document.querySelectorAll('.node, .btitle');
+  const innerIds=['n-gen','n-tpl','n-app1','n-app2','n-s1a','n-s1b','n-s2a','n-s2b'];
+
+  function resetAll(){
+    allNodes().forEach(n=>n.classList.remove('dim','active','pulse','ghost','stuck','synced'));
+    boundary.classList.remove('ghosted');
+    paths.forEach(p=>styleEdge(p,'base'));
+    selected=null;
+  }
+
+  let selected=null,busy=false;
+  function select(id){
+    if(busy)return;
+    resetAll();
+    if(selected===id){selected=null;log('lab log —','<span class="muted">selection cleared.</span>');return;}
+    selected=id;
+    if(id==='n-proj'){
+      document.querySelectorAll('.sidecol .node').forEach(n=>n.classList.add('dim'));
+      paths.forEach(p=>{const e=edges[p.dataset.i];
+        if(e[1]==='n-proj'){styleEdge(p,'hot');p.removeAttribute('stroke-dasharray');}else styleEdge(p,'faint');});
+      $('n-boot').classList.remove('dim');
+      const d=details[id];log(d[0]+' —',d[1]);return;
+    }
+    const touched=new Set([id]);
+    document.querySelectorAll('.node').forEach(n=>n.classList.add('dim'));
+    paths.forEach(p=>{
+      const e=edges[p.dataset.i];
+      if(e[0]===id||e[1]===id){styleEdge(p,'hot');p.removeAttribute('stroke-dasharray');
+        touched.add(e[0]);touched.add(e[1]);}
+      else styleEdge(p,'faint');
+    });
+    touched.forEach(t=>{const el=$(t);if(el.classList)el.classList.remove('dim');});
+    $(id).classList.add('active');
+    const d=details[id];
+    const conns=edges.filter(e=>e[0]===id||e[1]===id).map(e=>'· '+e[2]).join('<br>');
+    log(d[0]+' —',d[1]+(conns?'<br><span class="muted">'+conns+'</span>':''));
+  }
+  allNodes().forEach(n=>{
+    n.addEventListener('click',ev=>{ev.stopPropagation();select(n.id);});
+    n.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();select(n.id);}});
+  });
+
+  const DUR=reduced?450:1750;
+  function run(steps){
+    if(busy)return;busy=true;
+    Object.values(btns).forEach(b=>b.disabled=true);
+    resetAll();
+    let i=0;
+    (function next(){
+      if(i>=steps.length){busy=false;Object.values(btns).forEach(b=>b.disabled=false);return;}
+      steps[i]();i++;setTimeout(next,DUR);
+    })();
+  }
+  const pulse=ids=>ids.forEach(id=>$(id).classList.add('pulse'));
+  const unpulse=()=>allNodes().forEach(n=>n.classList.remove('pulse'));
+  const hot=is=>is.forEach(i=>styleEdge(paths[i],'hot'));
+  const hideE=is=>is.forEach(i=>styleEdge(paths[i],'hidden'));
+  const baseE=()=>paths.forEach(p=>styleEdge(p,'base'));
+  const ghost=ids=>ids.forEach(id=>$(id).classList.add('ghost'));
+  const unghost=ids=>ids.forEach(id=>$(id).classList.remove('ghost'));
+
+  // ---- TRACE 1: bootstrap cascade ----
+  btns.boot.addEventListener('click',()=>run([
+    ()=>{boundary.classList.add('ghosted');ghost(innerIds.concat(['n-dest','n-boot']));
+      hideE([...Array(15).keys()]);
+      pulse(['n-you']);
+      log('bootstrap · 1/6','Empty cluster (plus Argo CD itself). One human command incoming: <span class="pk">kubectl apply -f bootstrap/bootstrap-app.yaml</span> — the first and last manual step.');},
+    ()=>{unpulse();unghost(['n-boot']);hot([0]);pulse(['n-boot']);
+      log('bootstrap · 2/6','The seed exists: a kind: Application watching this repo\'s <span class="pk">argocd/</span> folder with prune + selfHeal. From here, git drives.');},
+    ()=>{unpulse();boundary.classList.remove('ghosted');unghost(['n-gen','n-tpl']);hot([1,2]);pulse(['n-proj','n-gen']);
+      log('bootstrap · 3/6','Seed syncs argocd/ → the <span class="pk">AppProject "lab"</span> fence and the <span class="pk">ApplicationSet "lab-apps"</span> come alive.');},
+    ()=>{unpulse();unghost(['n-app1','n-app2']);hot([3,4,5,6]);pulse(['n-app1','n-app2']);
+      log('bootstrap · 4/6','The list generator produces two children: <span class="pk">labs-hello-world</span> and <span class="pk">labs-podinfo</span> — one Application per element, both fenced by project lab.');},
+    ()=>{unpulse();unghost(['n-s1a','n-s1b','n-s2a','n-s2b']);hot([7,8,9,10,11,12]);
+      log('bootstrap · 5/6','Each child renders via two sources: the generic chart + the <span class="pk">ref: values</span> source exposing $values, overlaying <span class="pk">values/local/&lt;chart&gt;/values.yaml</span>.');},
+    ()=>{unghost(['n-dest']);hot([13,14]);$('n-dest').classList.add('synced');pulse(['n-dest']);
+      log('bootstrap · 6/6','<span class="good">Both apps land in namespace app.</span> Every level runs automated {prune, selfHeal} — fully self-driving GitOps from a single seed.');},
+  ]));
+
+  // ---- TRACE 2: add an app (podinfo as the example) ----
+  btns.add.addEventListener('click',()=>run([
+    ()=>{ghost(['n-app2','n-s2a','n-s2b']);hideE([4,6,10,11,12,14]);
+      $('n-app1').classList.add('dim');pulse(['n-gen']);
+      log('add an app · 1/5','A commit makes the 3 touches: chart under <span class="pk">charts/&lt;name&gt;/</span>, overrides under <span class="pk">values/local/&lt;name&gt;/</span>, and one new list element. (Replaying podinfo\'s arrival.)');},
+    ()=>{unpulse();$('n-app1').classList.add('dim');hot([2]);pulse(['n-boot','n-gen']);
+      log('add an app · 2/5','No kubectl needed: the bootstrap Application\'s own selfHeal re-applies argocd/ — the updated ApplicationSet reaches the cluster from git alone.');},
+    ()=>{unpulse();$('n-app1').classList.add('dim');unghost(['n-app2']);hot([4,6]);pulse(['n-tpl','n-app2']);
+      log('add an app · 3/5','ApplicationSet sees an element with no matching child → stamps the template → <span class="pk">labs-podinfo</span> appears, already inside the lab fence.');},
+    ()=>{unpulse();$('n-app1').classList.add('dim');unghost(['n-s2a','n-s2b']);hot([10,11,12]);
+      log('add an app · 4/5','Multi-source render: upstream chart + $values overlay. The chart stays generic; the environment lives entirely in values/local/.');},
+    ()=>{baseE();$('n-app2').classList.add('synced');hot([14]);pulse(['n-app2','n-dest']);
+      log('add an app · 5/5','<span class="good">Synced · Healthy in namespace app.</span> Note labs-hello-world stayed dimmed the whole time — blast radius of adding an app: exactly one new child.');},
+  ]));
+
+  // ---- TRACE 3: remove a list entry ----
+  btns.del.addEventListener('click',()=>run([
+    ()=>{pulse(['n-gen']);
+      log('remove an entry · 1/4','A commit deletes <span class="pk">{chartName: podinfo}</span> from the list. That\'s the entire "decommission" request.');},
+    ()=>{unpulse();hot([4]);$('n-app2').classList.add('stuck');
+      log('remove an entry · 2/4','ApplicationSet sees a child with no matching element → deletes <span class="pk">labs-podinfo</span>. Its <span class="pk">resources-finalizer.argocd.argoproj.io</span> blocks the CR from vanishing until cleanup is real.');},
+    ()=>{hot([14]);pulse(['n-dest']);
+      log('remove an entry · 3/4','The finalizer runs: every live resource podinfo owned in namespace app — Deployment, Redis, routes, ServiceMonitor, PDB — is pruned. No orphans left behind.');},
+    ()=>{unpulse();$('n-app2').classList.remove('stuck');ghost(['n-app2','n-s2a','n-s2b']);
+      hideE([4,6,10,11,12,14]);
+      log('remove an entry · 4/4','<span class="good">Cleanup complete, then the CR is released.</span> labs-hello-world untouched throughout. This is why the finalizer exists: deletion means <i>actually gone</i>, not abandoned.');},
+  ]));
+
+  // ---- TRACE 4: drift / selfHeal ----
+  btns.drift.addEventListener('click',()=>run([
+    ()=>{$('n-dest').classList.add('stuck');pulse(['n-dest']);
+      log('drift · 1/3','Someone runs <span class="bad">kubectl edit deployment</span> in namespace app — say, bumping replicas by hand. Live state no longer matches git.');},
+    ()=>{unpulse();hot([13]);pulse(['n-app1']);
+      log('drift · 2/3','Next reconcile: the Application\'s diff flags the drift. Because syncPolicy is <span class="pk">automated: {selfHeal: true}</span>, no human needs to click anything.');},
+    ()=>{unpulse();$('n-dest').classList.remove('stuck');$('n-dest').classList.add('synced');baseE();pulse(['n-dest']);
+      log('drift · 3/3','<span class="good">The edit is reverted; cluster matches git again.</span> The uncomfortable, correct lesson: in this repo, kubectl is not a management tool — git is.');},
+  ]));
+
+  chart.addEventListener('click',()=>{if(!busy){resetAll();log('lab log —','<span class="muted">cleared. Click a node or run a trace.</span>');}});
+
+  draw();
+  let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(draw,120);});
+})();
+</script>
+</body>
+</html>
