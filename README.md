@@ -98,3 +98,29 @@ charts/podinfo/ — the well-known upstream "podinfo" demo microservice, vendore
 
 ## NOTE :-
 kubectl edit on the cluster gets reverted, and deleting an entry from the ApplicationSet's list deletes that whole app from the cluster (resources-finalizer.argocd.argoproj.io finalizers make sure that cleanup actually happens instead of orphaning resources).
+
+
+## ARGOCD ARCHITECTURE 
+## 1. argocd-application-controller (a StatefulSet, hence the -0 suffix):-  
+   is the brain of the system. It continuously compares the desired state (manifests in Git) with the live state (what's actually running in the cluster). When they drift apart, it marks the Application as OutOfSync, and if auto-sync is enabled, it applies the changes. It also handles health assessment, pruning of deleted resources, and executing sync hooks.
+
+## 2. argocd-applicationset-controller :- 
+   manages ApplicationSet resources — a templating layer on top of Applications. Instead of manually creating an Argo CD Application per cluster or per environment, you define one ApplicationSet with a generator (list, Git directories, cluster labels, pull requests, etc.) and it automatically stamps out Applications. This is the multi-cluster / multi-environment automation piece.
+
+## 3. argocd-dex-server :- 
+   handles SSO authentication. Dex is an identity broker that connects Argo CD to external identity providers like Okta, Google, GitHub, LDAP, or SAML. When you log in via SSO, the request flows through Dex. If you only use local Argo CD users, this component sits mostly idle.
+
+## 4. argocd-notifications-controller :-
+   watches Application events (sync succeeded, sync failed, health degraded, etc.) and sends alerts to configured channels — Slack, email, Teams, PagerDuty, webhooks, and so on. It's how your team finds out a deployment failed without staring at the UI.
+
+## 5. argocd-redis :-
+   is an in-memory cache. It stores rendered manifests and cluster state comparisons so the controller and API server don't have to recompute or re-fetch everything constantly. It's throwaway data — losing Redis just means a temporary performance hit while caches rebuild, not data loss.
+
+## 6. argocd-repo-server :-
+   is the component that actually talks to your Git repositories. It clones repos, and — critically — renders the final manifests: running helm template, kustomize build, or Jsonnet as needed. The application controller asks the repo server "what should the desired state be?" and gets fully rendered YAML back. This is often the pod that needs more CPU/memory in large installations.
+
+## 7. argocd-server :-
+   is the API server and web UI. It's what you interact with — the dashboard at your Argo CD URL, the argocd CLI, and the gRPC/REST API all hit this pod. It handles authentication (delegating SSO to Dex), RBAC enforcement, and exposes application status. It's stateless, so it can be scaled horizontally.
+
+## How they work together, end to end :-  
+   you push a change to Git → the repo server pulls and renders the manifests → the application controller compares rendered manifests against the live cluster (using Redis as cache) → it syncs the difference into the cluster → the notifications controller tells your Slack channel it succeeded → you watch it all through the argocd-server UI, logged in via Dex.
