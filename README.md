@@ -123,20 +123,4 @@ kubectl edit on the cluster gets reverted, and deleting an entry from the Applic
    is the API server and web UI. It's what you interact with — the dashboard at your Argo CD URL, the argocd CLI, and the gRPC/REST API all hit this pod. It handles authentication (delegating SSO to Dex), RBAC enforcement, and exposes application status. It's stateless, so it can be scaled horizontally.
 
 ## How they work together, end to end :-  
-``` you push a change to Git
-                        │
-                        ▼
-      the repo server pulls and renders the manifests
-                        │
-                        ▼
-      the application controller compares rendered manifests against the live cluster (using Redis as cache)
-                        │
-                        ▼
-      it syncs the difference into the cluster
-                        │
-                        ▼
-      the notifications controller tells your Slack channel it succeeded
-                        │
-                        ▼
-      you watch it all through the argocd-server UI, logged in via Dex.
-```
+   you push a change to Git → the repo server pulls and renders the manifests → the application controller compares rendered manifests against the live cluster (using Redis as cache) → it syncs the difference into the cluster → the notifications controller tells your Slack channel it succeeded → you watch it all through the argocd-server UI, logged in via Dex.
