@@ -17,9 +17,9 @@ spec:
           - chartName: external-secrets
             path: charts/external-secrets
             namespace: external-secrets
-          # - chartName: vault
-          #   path: charts/vault
-          #   namespace: vault
+          - chartName: vault
+            path: charts/vault
+            namespace: vault
   template:
     metadata:
       name: 'labs-{{chartName}}'
