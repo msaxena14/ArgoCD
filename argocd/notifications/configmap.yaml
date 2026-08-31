@@ -25,9 +25,9 @@ data:
             "fields": [
               {"type": "mrkdwn", "text": "*Application:*\n{{.app.metadata.name}}"},
               {"type": "mrkdwn", "text": "*Namespace:*\n{{.app.spec.destination.namespace}}"},
-              {"type": "mrkdwn", "text": "*Repo:*\n<{{trimSuffix \".git\" $src.repoURL}}|View Repo>"},
+              {"type": "mrkdwn", "text": "*Repo:*\n<{{trimSuffix ".git" $src.repoURL}}|View Repo>"},
               {"type": "mrkdwn", "text": "*Revision:*\n{{if .app.status.sync.revisions}}{{index .app.status.sync.revisions 0 | trunc 7}}{{else}}N/A{{end}}"},
-              {"type": "mrkdwn", "text": "*Image(s):*\n{{if .app.status.summary.images}}{{join \", \" .app.status.summary.images}}{{else}}N/A{{end}}"}
+              {"type": "mrkdwn", "text": "*Image(s):*\n{{if .app.status.summary.images}}{{join ", " .app.status.summary.images}}{{else}}N/A{{end}}"}
             ]
           },
           {
