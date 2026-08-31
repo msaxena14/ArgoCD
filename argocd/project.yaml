@@ -5,8 +5,9 @@ metadata:
   namespace: argocd
 spec:
   description: A sandbox lab project for testing ArgoCD configurations and applications.
-  sourceRepos:
-    - https://github.com/msaxena14/ArgoCD.git
+  sourceRepos: 
+      - https://github.com/msaxena14/ArgoCD.git
+      - https://charts.external-secrets.io
   destinations:
     - namespace: 'app'
       server: https://kubernetes.default.svc
