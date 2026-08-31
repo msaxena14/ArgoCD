@@ -11,7 +11,7 @@ spec:
         elements:
           - chartName: hello-world
             path: charts/hello-world
-            namespace: app
+            namespace: --
           - chartName: podinfo
             path: charts/podinfo
             namespace: app
