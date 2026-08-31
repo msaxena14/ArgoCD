@@ -1,0 +1,18 @@
+injector:
+    enabled: false
+server:
+  standalone:
+    enabled: true
+    config: |
+      listener "tcp" {
+        address     = "[::]:8200"
+        tls_disable = 1
+      }
+      storage "file" {
+        path = "/vault/data"
+      }
+  dataStorage:
+    enabled: true
+    size: 1Gi
+  service:
+    enabled: true
