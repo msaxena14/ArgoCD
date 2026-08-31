@@ -3,6 +3,12 @@ kind: ApplicationSet
 metadata:
   name: lab-apps
   namespace: argocd
+  annotations:
+    notifications.argoproj.io/subscriptions: |
+      - trigger: [on-sync-succeeded, on-sync-failed, on-health-degraded]
+        destinations:
+          - service: slack
+            recipients: [argo-notification]
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
