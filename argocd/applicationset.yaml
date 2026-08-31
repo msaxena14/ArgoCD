@@ -15,8 +15,10 @@ spec:
           #   path: charts/podinfo
           - chartName: external-secrets
             path: charts/external-secrets
+            namespace: external-secrets
           - chartName: vault
             path: charts/vault
+            namespace: vault
   template:
     metadata:
       name: 'labs-{{chartName}}'
@@ -25,7 +27,7 @@ spec:
     spec:
       project: lab
       destination:
-        namespace: app
+        namespace: '{{namespace}}'
         server: https://kubernetes.default.svc
       sources:
         - repoURL: https://github.com/msaxena14/ArgoCD.git
