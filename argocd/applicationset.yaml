@@ -3,12 +3,6 @@ kind: ApplicationSet
 metadata:
   name: lab-apps
   namespace: argocd
-  annotations:
-    notifications.argoproj.io/subscriptions: |
-      - trigger: [on-sync-succeeded, on-sync-failed, on-health-degraded]
-        destinations:
-          - service: slack
-            recipients: [argo-notification]
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
@@ -18,8 +12,9 @@ spec:
           - chartName: hello-world
             path: charts/hello-world
             namespace: app
-          # - chartName: podinfo
-          #   path: charts/podinfo
+          - chartName: podinfo
+            path: charts/podinfo
+            namespace: app
           - chartName: external-secrets
             path: charts/external-secrets
             namespace: external-secrets
@@ -29,6 +24,12 @@ spec:
   template:
     metadata:
       name: 'labs-{{chartName}}'
+      annotations:
+        notifications.argoproj.io/subscriptions: |
+          - trigger: [on-sync-succeeded, on-sync-failed, on-health-degraded]
+            destinations:
+              - service: slack
+                recipients: [argo-notification]
       finalizers:
         - resources-finalizer.argocd.argoproj.io
     spec:
