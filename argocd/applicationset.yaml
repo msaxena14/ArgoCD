@@ -39,7 +39,7 @@ spec:
         server: https://kubernetes.default.svc
       sources:
         - repoURL: https://github.com/msaxena14/ArgoCD.git
-          targetRevision: this-branch-does-not-exist
+          targetRevision: main
           path: '{{path}}'
           helm:
             releaseName: '{{chartName}}'
