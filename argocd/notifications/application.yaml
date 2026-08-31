@@ -1,15 +1,15 @@
-  apiVersion: argoproj.io/v1alpha1
-  kind: Application
-  metadata:
-    annotations:
-      notifications.argoproj.io/subscriptions: |
-        - trigger: [on-scaling-replica-set, on-rollout-updated, on-rollout-step-completed]
-          destinations:
-            - service: slack
-              recipients: [argo-notification]
-            - service: email
-              recipients: [madhavamsaxena14@gmail.com, mridul1002@gmail.com]
-        - trigger: [on-rollout-aborted, on-analysis-run-failed, on-analysis-run-error]
-          destinations:
-            - service: slack
-              recipients: [argo-notification]
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  annotations:
+    notifications.argoproj.io/subscriptions: |
+      - trigger: [on-scaling-replica-set, on-rollout-updated, on-rollout-step-completed]
+        destinations:
+          - service: slack
+            recipients: [argo-notification]
+          - service: email
+            recipients: [madhavamsaxena14@gmail.com, mridul1002@gmail.com]
+      - trigger: [on-rollout-aborted, on-analysis-run-failed, on-analysis-run-error]
+        destinations:
+          - service: slack
+            recipients: [argo-notification]
