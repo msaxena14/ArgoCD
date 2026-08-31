@@ -36,13 +36,6 @@ spec:
         - repoURL: https://github.com/msaxena14/ArgoCD.git
           targetRevision: main
           ref: values
-        - repoURL: https://charts.external-secrets.io
-          targetRevision: 2.10.0
-          chart: external-secrets
-          helm:
-            releaseName: external-secrets
-            valueFiles:
-              - $values/values/local/external-secrets/values.yaml
       syncPolicy:
         automated:
           prune: true
