@@ -11,7 +11,7 @@ spec:
         elements:
           - chartName: hello-world
             path: charts/hello-world
-            namespace: --
+            namespace: app
           - chartName: podinfo
             path: charts/podinfo
             namespace: app
@@ -39,7 +39,7 @@ spec:
         server: https://kubernetes.default.svc
       sources:
         - repoURL: https://github.com/msaxena14/ArgoCD.git
-          targetRevision: main
+          targetRevision: this-branch-does-not-exist
           path: '{{path}}'
           helm:
             releaseName: '{{chartName}}'
