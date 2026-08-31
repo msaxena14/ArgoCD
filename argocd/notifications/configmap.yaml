@@ -1,106 +1,106 @@
-  apiVersion: v1
-  kind: ConfigMap
-  metadata:
-    name: argocd-notifications-cm
-  data:
-    service.slack: |
-      token: $slack-token
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+data:
+  service.slack: |
+    token: $slack-token
 
-    context: |
-      argocdUrl: http://localhost:8080
+  context: |
+    argocdUrl: http://localhost:8080
 
-    template.app-sync-succeeded: |
-      message: |
-        Application {{.app.metadata.name}} is now running the new version of its manifests.
-      slack:
-        attachments: |
-          [{
-            "title": "{{.app.metadata.name}}",
-            "title_link": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
-            "color": "#18be52",
-            "fields": [{"title": "Sync Status", "value": "{{.app.status.sync.status}}", "short": true}]
-          }]
-  
-    template.app-sync-succeeded: |
-      message: |
-        :white_check_mark: *{{.app.metadata.name}}* synced successfully                    
-      slack:
-        blocks: |
-          [
-            {
-              "type": "header",
-              "text": {"type": "plain_text", "text": ":white_check_mark: Sync Succeeded", "emoji": true}
-            },
-            {
-              "type": "section",
-              "fields": [
-                {"type": "mrkdwn", "text": "*Application:*\n{{.app.metadata.name}}"},
-                {"type": "mrkdwn", "text": "*Namespace:*\n{{.app.spec.destination.namespace}}"},
-                {"type": "mrkdwn", "text": "*Repo:*\n{{.app.spec.source.repoURL}}"},
-                {"type": "mrkdwn", "text": "*Revision:*\n{{.app.status.sync.revision | trunc 7}}"}
-              ]
-            },
-            {
-              "type": "context",
-              "elements": [
-                {"type": "mrkdwn", "text": "<{{.context.argocdUrl}}/applications/{{.app.metadata.name}}|View in ArgoCD>"}
-              ]
-            }
-          ]
-  
-    template.app-sync-failed: |
-      message: |
-        :x: *{{.app.metadata.name}}* failed to sync
-      slack:
-        blocks: |
-          [
-            {
-              "type": "header",
-              "text": {"type": "plain_text", "text": ":x: Sync Failed", "emoji": true}
-            },
-            {
-              "type": "section",
-              "fields": [
-                {"type": "mrkdwn", "text": "*Application:*\n{{.app.metadata.name}}"},
-                {"type": "mrkdwn", "text": "*Namespace:*\n{{.app.spec.destination.namespace}}"},
-                {"type": "mrkdwn", "text": "*Sync Status:*\n{{.app.status.sync.status}}"}
-              ]
-            },
-            {
-              "type": "section",
-              "text": {"type": "mrkdwn", "text": "*Error:*\n```{{.app.status.operationState.message}}```"}
-            },
-            {
-              "type": "context",
-              "elements": [
-                {"type": "mrkdwn", "text": "<{{.context.argocdUrl}}/applications/{{.app.metadata.name}}|View in ArgoCD>"}
-              ]
-            }
-          ]
+  template.app-sync-succeeded: |
+    message: |
+      :white_check_mark: *{{.app.metadata.name}}* synced successfully
+    slack:
+      blocks: |
+        [
+          {
+            "type": "header",
+            "text": {"type": "plain_text", "text": ":white_check_mark: Sync Succeeded", "emoji": true}
+          },
+          {
+            "type": "section",
+            "fields": [
+              {"type": "mrkdwn", "text": "*Application:*\n{{.app.metadata.name}}"},
+              {"type": "mrkdwn", "text": "*Namespace:*\n{{.app.spec.destination.namespace}}"},
+              {"type": "mrkdwn", "text": "*Repo:*\n{{.app.spec.source.repoURL}}"},
+              {"type": "mrkdwn", "text": "*Revision:*\n{{.app.status.sync.revision | trunc 7}}"}
+            ]
+          },
+          {
+            "type": "context",
+            "elements": [
+              {"type": "mrkdwn", "text": "<{{.context.argocdUrl}}/applications/{{.app.metadata.name}}|View in ArgoCD>"}
+            ]
+          }
+        ]
 
-    template.app-health-degraded: |
-      message: |
-        :warning: *{{.app.metadata.name}}* is degraded
-      slack:
-        blocks: |
-          [
-            {
-              "type": "header",
-              "text": {"type": "plain_text", "text": ":warning: Health Degraded", "emoji": true}
-            },
-            {
-              "type": "section",
-              "fields": [
-                {"type": "mrkdwn", "text": "*Application:*\n{{.app.metadata.name}}"},
-                {"type": "mrkdwn", "text": "*Namespace:*\n{{.app.spec.destination.namespace}}"},
-                {"type": "mrkdwn", "text": "*Health Status:*\n{{.app.status.health.status}}"}
-              ]
-            },
-            {
-              "type": "context",
-              "elements": [
-                {"type": "mrkdwn", "text": "<{{.context.argocdUrl}}/applications/{{.app.metadata.name}}|View in ArgoCD>"}
-              ]
-            }
-          ]
-  
+  template.app-sync-failed: |
+    message: |
+      :x: *{{.app.metadata.name}}* failed to sync
+    slack:
+      blocks: |
+        [
+          {
+            "type": "header",
+            "text": {"type": "plain_text", "text": ":x: Sync Failed", "emoji": true}     
+          },
+          {
+            "type": "section",
+            "fields": [
+              {"type": "mrkdwn", "text": "*Application:*\n{{.app.metadata.name}}"},
+              {"type": "mrkdwn", "text": "*Namespace:*\n{{.app.spec.destination.namespace}}"},
+              {"type": "mrkdwn", "text": "*Sync Status:*\n{{.app.status.sync.status}}"}
+            ]
+          },
+          {
+            "type": "section",
+            "text": {"type": "mrkdwn", "text": "*Error:*\n```{{.app.status.operationState.message}}```"}
+          },
+          {
+            "type": "context",
+            "elements": [
+              {"type": "mrkdwn", "text": "<{{.context.argocdUrl}}/applications/{{.app.metadata.name}}|View in ArgoCD>"}
+            ]
+          }
+        ]
+
+  template.app-health-degraded: |
+    message: |
+      :warning: *{{.app.metadata.name}}* is degraded
+    slack:
+      blocks: |
+        [
+          {
+            "type": "header",
+            "text": {"type": "plain_text", "text": ":warning: Health Degraded", "emoji": true}
+          },
+          {
+            "type": "section",
+            "fields": [
+              {"type": "mrkdwn", "text": "*Application:*\n{{.app.metadata.name}}"},
+              {"type": "mrkdwn", "text": "*Namespace:*\n{{.app.spec.destination.namespace}}"},
+              {"type": "mrkdwn", "text": "*Health Status:*\n{{.app.status.health.status}}"}
+            ]
+          },
+          {
+            "type": "context",
+            "elements": [
+              {"type": "mrkdwn", "text": "<{{.context.argocdUrl}}/applications/{{.app.metadata.name}}|View in ArgoCD>"}
+            ]
+          }
+        ]
+
+  trigger.on-sync-succeeded: |
+    - when: app.status.operationState.phase in ['Succeeded']
+      send: [app-sync-succeeded]
+
+  trigger.on-sync-failed: |
+    - when: app.status.operationState.phase in ['Error', 'Failed']                       
+      send: [app-sync-failed]
+
+  trigger.on-health-degraded: |
+    - when: app.status.health.status == 'Degraded'
+      send: [app-health-degraded]
+
