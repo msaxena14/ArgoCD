@@ -25,7 +25,7 @@ data:
               {"type": "mrkdwn", "text": "*Application:*\n{{.app.metadata.name}}"},
               {"type": "mrkdwn", "text": "*Namespace:*\n{{.app.spec.destination.namespace}}"},
               {"type": "mrkdwn", "text": "*Repo:*\n{{.app.spec.source.repoURL}}"},
-              {"type": "mrkdwn", "text": "*Revision:*\n{{.app.status.sync.revision | trunc 7}}"}
+              {"type": "mrkdwn", "text": "*Revision:*\n{{if .app.status.sync.revisions}}{{index .app.status.sync.revisions 0 | trunc 7}}{{else}}N/A{{end}}"}
             ]
           },
           {
