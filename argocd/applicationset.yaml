@@ -15,12 +15,12 @@ spec:
           # - chartName: podinfo
           #   path: charts/podinfo
           #   namespace: app
-          # - chartName: external-secrets
-          #   path: charts/external-secrets
-          #   namespace: external-secrets
-          # - chartName: vault
-          #   path: charts/vault
-          #   namespace: vault
+          - chartName: external-secrets
+            path: charts/external-secrets
+            namespace: external-secrets
+          - chartName: vault
+            path: charts/vault
+            namespace: vault
           - chartName: n8n
             path: charts/n8n
             namespace: n8n
