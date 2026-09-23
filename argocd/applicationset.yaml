@@ -23,6 +23,7 @@ spec:
           #   namespace: vault
           - chartName: n8n
             path: charts/n8n
+            namespace: n8n
   template:
     metadata:
       name: 'labs-{{chartName}}'
